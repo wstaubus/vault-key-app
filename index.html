@@ -1,0 +1,94 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Cofre — login com Google</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,600;9..144,700&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<div class="lock-wrap" id="lockWrap">
+  <div class="lock-box">
+    <svg class="lock-icon" viewBox="0 0 40 40" fill="none">
+      <rect x="9" y="18" width="22" height="16" rx="2" stroke="#B08D57" stroke-width="2"/>
+      <path d="M13 18v-5a7 7 0 0 1 14 0v5" stroke="#B08D57" stroke-width="2"/>
+      <circle cx="20" cy="26" r="2.3" fill="#B08D57"/>
+    </svg>
+    <h1>Cofre</h1>
+    <p class="lock-sub">Suas credenciais, criptografadas, salvas no seu próprio Google Drive.</p>
+
+    <div id="gsiStep">
+      <div id="gsiButtonWrap"></div>
+    </div>
+
+    <div id="pwStep" style="display:none;">
+      <h2 id="pwStepTitle" style="font-size:16px; margin:0 0 4px;"></h2>
+      <p class="lock-sub" id="pwStepSub" style="margin-bottom:18px;"></p>
+      <div class="field">
+        <label>Senha mestra</label>
+        <input type="password" id="pwInput" placeholder="••••••••">
+      </div>
+      <div class="field" id="pwConfirmField">
+        <label>Confirmar senha mestra</label>
+        <input type="password" id="pwConfirmInput" placeholder="••••••••">
+      </div>
+      <button class="btn" id="pwSubmitBtn">Continuar</button>
+    </div>
+
+    <div class="err" id="lockErr"></div>
+  </div>
+</div>
+
+<div class="app" id="app">
+  <header class="top">
+    <h1>Cofre <span class="badge">Google Drive</span></h1>
+    <div class="top-actions">
+      <span class="sync-status" id="syncStatus"></span>
+      <span class="user-chip" id="userChip"></span>
+      <button class="btn ghost small" id="signOutBtn">Sair</button>
+    </div>
+  </header>
+
+  <div class="toolbar">
+    <input type="text" id="searchInput" placeholder="Buscar por nome...">
+    <button class="btn small" id="btnNew" style="width:auto;">+ Nova credencial</button>
+  </div>
+
+  <div class="grid" id="grid"></div>
+  <div class="empty" id="emptyState" style="display:none;">
+    <div class="display">Nenhuma credencial ainda</div>
+    <div>Clique em "+ Nova credencial" para guardar a primeira.</div>
+  </div>
+</div>
+
+<div class="overlay" id="overlay">
+  <div class="modal">
+    <h2 id="modalTitle">Nova credencial</h2>
+    <div class="img-picker">
+      <img class="img-preview" id="imgPreview" src="">
+      <div style="flex:1;">
+        <label>Imagem (opcional)</label>
+        <input type="file" id="imgInput" accept="image/*">
+      </div>
+    </div>
+    <div class="field"><label>Nome</label><input type="text" id="fName" placeholder="Ex: Gmail pessoal"></div>
+    <div class="field"><label>Senha</label><input type="text" id="fSenha" placeholder="Senha"></div>
+    <div class="field"><label>Link</label><input type="url" id="fLink" placeholder="https://..."></div>
+    <div class="field"><label>Descritivo</label><textarea id="fDesc" placeholder="Observações, e-mail associado, etc."></textarea></div>
+    <div class="modal-actions">
+      <button class="btn ghost" id="btnCancel">Cancelar</button>
+      <button class="btn" id="btnSave">Salvar</button>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script src="config.js"></script>
+<script src="app.js"></script>
+<script src="https://accounts.google.com/gsi/client" async defer onload="onGsiLoad()"></script>
+</body>
+</html>
