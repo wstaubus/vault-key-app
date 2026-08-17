@@ -14,7 +14,7 @@
 // ============================================================
 
 const CONFIG = {
-  GOOGLE_CLIENT_ID: 72017923244-vgi8ld2vak89r62uufppf3q8un7m2c57.apps.googleusercontent.com,
+  GOOGLE_CLIENT_ID: "72017923244-vgi8ld2vak89r62uufppf3q8un7m2c57.apps.googleusercontent.com",
   DRIVE_FILE_NAME: "cofre-vault.json",
   DRIVE_SCOPE: "https://www.googleapis.com/auth/drive.file"
 };
