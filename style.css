@@ -125,3 +125,62 @@ header.top h1{ font-size:21px; margin:0; display:flex; align-items:center; gap:1
 }
 .toast.show{ opacity:1; }
 @media (max-width:480px){ .app{ padding:20px 14px 60px; } header.top{ position:static; } }
+
+/* ============================================================
+   RESPONSIVIDADE — ênfase em smartphones
+   ============================================================ */
+body{ padding-bottom: env(safe-area-inset-bottom); }
+
+.lock-wrap{
+  padding-top: max(24px, env(safe-area-inset-top));
+  padding-bottom: max(24px, env(safe-area-inset-bottom));
+  padding-left: max(20px, env(safe-area-inset-left));
+  padding-right: max(20px, env(safe-area-inset-right));
+}
+
+@media (max-width: 640px){
+  .lock-box{ padding:34px 24px; border-radius:20px; max-width:100%; }
+  .lock-box h1{ font-size:24px; }
+  .lock-sub{ font-size:13.5px; }
+
+  .app{ padding: 16px max(14px, env(safe-area-inset-left)) 60px max(14px, env(safe-area-inset-right)); }
+
+  header.top{
+    flex-direction:column; align-items:stretch; gap:12px;
+    padding:14px 16px; border-radius:16px; position:static;
+  }
+  header.top h1{ font-size:18px; justify-content:center; }
+  .top-actions{ width:100%; justify-content:space-between; }
+
+  .toolbar{ flex-direction:column; }
+  .toolbar input[type=text]{ width:100%; }
+  #btnNew{ width:100% !important; }
+
+  .grid{ grid-template-columns:1fr; gap:12px; }
+  .card-item{ padding:16px; border-radius:16px; }
+
+  /* alvos de toque maiores (mín. 44px, padrão Apple HIG) */
+  .icon-btn{ padding:10px; font-size:16px; }
+  .pw-row{ padding:11px 12px; }
+  .btn.small{ padding:11px 16px; font-size:14px; }
+
+  /* modal vira bottom sheet no celular */
+  .overlay{ align-items:flex-end; padding:0; }
+  .modal{
+    max-width:100%; width:100%; border-radius:22px 22px 0 0;
+    max-height:92vh; padding:26px 20px max(26px, calc(env(safe-area-inset-bottom) + 16px));
+  }
+  .modal-actions{ flex-direction:column-reverse; }
+  .modal-actions .btn{ flex:none; }
+
+  .toast{
+    bottom: max(20px, calc(env(safe-area-inset-bottom) + 12px));
+    left:16px; right:16px; transform:none; text-align:center;
+  }
+}
+
+@media (max-width: 380px){
+  .grid{ gap:10px; }
+  .card-titles .name{ font-size:15.5px; }
+  header.top h1{ font-size:17px; }
+}

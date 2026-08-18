@@ -38,31 +38,82 @@ let tokenClient = null;
 // ============================================================
 // GOOGLE SIGN-IN (Identity Services)
 // ============================================================
-window.onGsiLoad = function(){
-  google.accounts.id.initialize({
-    client_id: CONFIG.GOOGLE_CLIENT_ID,
-    callback: handleCredentialResponse
-  });
-  google.accounts.id.renderButton($('gsiButtonWrap'), { theme:'filled_black', size:'large', shape:'pill', text:'signin_with' });
-
-  tokenClient = google.accounts.oauth2.initTokenClient({
-    client_id: CONFIG.GOOGLE_CLIENT_ID,
-    scope: CONFIG.DRIVE_SCOPE,
-    callback: async (resp) => {
-      if(resp.error){ $('lockErr').textContent = 'Falha ao autorizar o Google Drive.'; return; }
-      accessToken = resp.access_token;
-      await afterAuth();
-    }
-  });
+window.onGsiLoadError = function(){
+  $('gsiLoadErr').style.display = 'block';
 };
 
+window.onGsiLoad = function(){
+  try{
+    if(!CONFIG.GOOGLE_CLIENT_ID || CONFIG.GOOGLE_CLIENT_ID.includes('COLE_SEU_CLIENT_ID')){
+      showLoginError('O app ainda não foi configurado: falta colar o Client ID do Google em config.js.');
+      return;
+    }
+    google.accounts.id.initialize({
+      client_id: CONFIG.GOOGLE_CLIENT_ID,
+      callback: handleCredentialResponse,
+      error_callback: (err) => showLoginError(mapAuthError(err?.type))
+    });
+    google.accounts.id.renderButton($('gsiButtonWrap'), { theme:'filled_black', size:'large', shape:'pill', text:'signin_with' });
+
+    tokenClient = google.accounts.oauth2.initTokenClient({
+      client_id: CONFIG.GOOGLE_CLIENT_ID,
+      scope: CONFIG.DRIVE_SCOPE,
+      callback: async (resp) => {
+        if(resp.error){
+          showLoginError(mapAuthError(resp.error));
+          return;
+        }
+        accessToken = resp.access_token;
+        try{
+          await afterAuth();
+        }catch(e){
+          showLoginError('Login feito, mas não foi possível acessar o Google Drive. Verifique sua internet e tente novamente.');
+          showRetry(() => tokenClient.requestAccessToken({ prompt:'' }));
+        }
+      },
+      error_callback: (err) => showLoginError(mapAuthError(err?.type))
+    });
+  }catch(e){
+    showLoginError('Não foi possível iniciar o login do Google. Recarregue a página e tente novamente.');
+  }
+};
+
+function mapAuthError(type){
+  switch(type){
+    case 'popup_closed': case 'popup_closed_by_user':
+      return 'Você fechou a janela antes de concluir o login.';
+    case 'access_denied':
+      return 'É necessário autorizar o acesso ao Google Drive para usar o cofre.';
+    case 'immediate_failed':
+      return 'Não foi possível entrar automaticamente. Clique no botão para tentar de novo.';
+    case 'popup_failed_to_open':
+      return 'O navegador bloqueou a janela de login. Permita pop-ups para este site e tente novamente.';
+    default:
+      return 'Não foi possível conectar com sua conta Google. Tente novamente.';
+  }
+}
+function showLoginError(msg){
+  $('lockErr').textContent = msg;
+  setSync('', '');
+}
+function showRetry(fn){
+  const btn = $('retryBtn');
+  btn.style.display = 'inline-block';
+  btn.onclick = () => { btn.style.display = 'none'; $('lockErr').textContent=''; fn(); };
+}
+
 function handleCredentialResponse(response){
-  // decode the JWT just to show name/photo — the real Drive access
-  // comes from the separate token client below.
-  const payload = JSON.parse(atob(response.credential.split('.')[1]));
-  googleUser = { name: payload.name, email: payload.email, picture: payload.picture };
-  // now request the Drive access token
-  tokenClient.requestAccessToken({ prompt: '' });
+  try{
+    // decode the JWT just to show name/photo — the real Drive access
+    // comes from the separate token client below.
+    const payload = JSON.parse(atob(response.credential.split('.')[1]));
+    googleUser = { name: payload.name, email: payload.email, picture: payload.picture };
+    $('lockErr').textContent = '';
+    // now request the Drive access token
+    tokenClient.requestAccessToken({ prompt: '' });
+  }catch(e){
+    showLoginError('Não foi possível concluir o login com o Google. Tente novamente.');
+  }
 }
 
 // ============================================================
@@ -71,19 +122,35 @@ function handleCredentialResponse(response){
 const DRIVE_API = 'https://www.googleapis.com/drive/v3';
 const DRIVE_UPLOAD_API = 'https://www.googleapis.com/upload/drive/v3';
 
+async function driveFetch(url, options={}){
+  let r;
+  try{
+    r = await fetch(url, options);
+  }catch(networkErr){
+    throw new Error('Sem conexão com a internet. Verifique sua rede e tente novamente.');
+  }
+  if(r.status === 401){
+    accessToken = null;
+    throw new Error('SESSION_EXPIRED');
+  }
+  if(!r.ok){
+    throw new Error('O Google Drive não respondeu como esperado. Tente novamente em instantes.');
+  }
+  return r;
+}
+
 async function driveFindFile(){
   const q = encodeURIComponent(`name='${CONFIG.DRIVE_FILE_NAME}' and trashed=false`);
-  const r = await fetch(`${DRIVE_API}/files?q=${q}&fields=files(id,name,modifiedTime)`, {
+  const r = await driveFetch(`${DRIVE_API}/files?q=${q}&fields=files(id,name,modifiedTime)`, {
     headers: { Authorization: `Bearer ${accessToken}` }
   });
   const data = await r.json();
   return (data.files && data.files[0]) || null;
 }
 async function driveReadFile(fileId){
-  const r = await fetch(`${DRIVE_API}/files/${fileId}?alt=media`, {
+  const r = await driveFetch(`${DRIVE_API}/files/${fileId}?alt=media`, {
     headers: { Authorization: `Bearer ${accessToken}` }
   });
-  if(!r.ok) throw new Error('drive read failed');
   return r.json();
 }
 async function driveCreateFile(content){
@@ -92,7 +159,7 @@ async function driveCreateFile(content){
   const body =
     `--${boundary}\r\nContent-Type: application/json; charset=UTF-8\r\n\r\n${JSON.stringify(metadata)}\r\n` +
     `--${boundary}\r\nContent-Type: application/json\r\n\r\n${JSON.stringify(content)}\r\n--${boundary}--`;
-  const r = await fetch(`${DRIVE_UPLOAD_API}/files?uploadType=multipart&fields=id`, {
+  const r = await driveFetch(`${DRIVE_UPLOAD_API}/files?uploadType=multipart&fields=id`, {
     method: 'POST',
     headers: { Authorization: `Bearer ${accessToken}`, 'Content-Type': `multipart/related; boundary=${boundary}` },
     body
@@ -101,7 +168,7 @@ async function driveCreateFile(content){
   return data.id;
 }
 async function driveUpdateFile(fileId, content){
-  await fetch(`${DRIVE_UPLOAD_API}/files/${fileId}?uploadType=media`, {
+  await driveFetch(`${DRIVE_UPLOAD_API}/files/${fileId}?uploadType=media`, {
     method: 'PATCH',
     headers: { Authorization: `Bearer ${accessToken}`, 'Content-Type': 'application/json' },
     body: JSON.stringify(content)
@@ -116,14 +183,26 @@ async function afterAuth(){
   $('lockErr').textContent = '';
   setSync('Procurando cofre no Google Drive...', 'saving');
 
-  const existing = await driveFindFile();
-  if(existing){
-    driveFileId = existing.id;
-    const remote = await driveReadFile(driveFileId);
-    // remote = { salt, verifierIv, verifierCt, dataIv, dataCt }
-    showMasterPasswordGate(remote, false);
-  } else {
-    showMasterPasswordGate(null, true);
+  try{
+    const existing = await driveFindFile();
+    if(existing){
+      driveFileId = existing.id;
+      const remote = await driveReadFile(driveFileId);
+      showMasterPasswordGate(remote, false);
+    } else {
+      showMasterPasswordGate(null, true);
+    }
+    setSync('');
+  }catch(e){
+    setSync('', '');
+    if(e.message === 'SESSION_EXPIRED'){
+      showLoginError('Sua sessão do Google expirou. Clique em Entrar novamente.');
+      $('gsiStep').style.display = 'block';
+      $('pwStep').style.display = 'none';
+    } else {
+      showLoginError(e.message || 'Não foi possível acessar o Google Drive.');
+      showRetry(afterAuth);
+    }
   }
 }
 
@@ -153,9 +232,15 @@ async function createVault(){
 
   const remoteObj = { salt:saltB64, verifierIv:verifier.iv, verifierCt:verifier.ct, dataIv:dataPart.iv, dataCt:dataPart.ct };
   setSync('Criando cofre no Google Drive...', 'saving');
-  driveFileId = await driveCreateFile(remoteObj);
-  setSync('Sincronizado com o Google Drive');
-  enterApp();
+  try{
+    driveFileId = await driveCreateFile(remoteObj);
+    setSync('Sincronizado com o Google Drive');
+    enterApp();
+  }catch(e){
+    setSync('', '');
+    showLoginError(e.message === 'SESSION_EXPIRED' ? 'Sua sessão do Google expirou. Faça login novamente.' : (e.message || 'Não foi possível criar o cofre no Google Drive.'));
+    showRetry(createVault);
+  }
 }
 
 async function openVault(remote){
@@ -208,7 +293,13 @@ async function persistVault(){
     await driveUpdateFile(driveFileId, merged);
     setSync('Sincronizado com o Google Drive');
   }catch(e){
-    setSync('Falha ao salvar no Drive — tentando de novo', 'err');
+    if(e.message === 'SESSION_EXPIRED'){
+      setSync('Sessão expirada — faça login novamente para continuar salvando', 'err');
+      toast('Sua sessão do Google expirou');
+    } else {
+      setSync('Falha ao salvar no Drive — verifique sua internet', 'err');
+      toast('Não foi possível salvar no Google Drive');
+    }
   }
 }
 

@@ -2,7 +2,7 @@
 <html lang="pt-BR">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, viewport-fit=cover">
 <title>Cofre — login com Google</title>
 <link rel="stylesheet" href="style.css">
 </head>
@@ -20,6 +20,7 @@
 
     <div id="gsiStep">
       <div id="gsiButtonWrap"></div>
+      <p class="err" id="gsiLoadErr" style="display:none;">Não foi possível carregar o login do Google. Verifique sua conexão ou desative bloqueadores de anúncio/script e recarregue a página.</p>
     </div>
 
     <div id="pwStep" style="display:none;">
@@ -37,6 +38,7 @@
     </div>
 
     <div class="err" id="lockErr"></div>
+    <button class="btn ghost small" id="retryBtn" style="display:none; margin-top:14px;">Tentar novamente</button>
   </div>
 </div>
 
@@ -87,6 +89,6 @@
 
 <script src="config.js"></script>
 <script src="app.js"></script>
-<script src="https://accounts.google.com/gsi/client" async defer onload="onGsiLoad()"></script>
+<script src="https://accounts.google.com/gsi/client" async defer onload="onGsiLoad()" onerror="onGsiLoadError()"></script>
 </body>
 </html>
