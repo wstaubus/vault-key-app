@@ -184,3 +184,11 @@ body{ padding-bottom: env(safe-area-inset-bottom); }
   .card-titles .name{ font-size:15.5px; }
   header.top h1{ font-size:17px; }
 }
+
+/* botão "Entrar com o Google" seguindo as diretrizes de marca do Google */
+.google-btn{
+  background:#ffffff; color:#1f1f1f; border:1px solid #dadce0;
+  display:flex; align-items:center; justify-content:center; gap:10px;
+  font-weight:500;
+}
+.google-btn:hover{ background:#f8f9fa; box-shadow:0 1px 2px rgba(0,0,0,0.08); }

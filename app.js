@@ -33,61 +33,113 @@ let entries = [];
 let driveFileId = null;
 let editingId = null;
 let pendingImage = '';
-let tokenClient = null;
 
 // ============================================================
-// GOOGLE SIGN-IN (Identity Services)
+// GOOGLE SIGN-IN — fluxo por redirecionamento (sem popup)
 // ============================================================
-window.onGsiLoadError = function(){
-  $('gsiLoadErr').style.display = 'block';
-};
+// O navegador é levado para a tela de login do Google e volta
+// para esta mesma URL com o token na fragment (#) do endereço.
+// Como é uma navegação normal de página, bloqueadores de popup
+// não têm efeito nenhum sobre esse fluxo.
 
-window.onGsiLoad = function(){
-  try{
-    if(!CONFIG.GOOGLE_CLIENT_ID || CONFIG.GOOGLE_CLIENT_ID.includes('COLE_SEU_CLIENT_ID')){
-      showLoginError('O app ainda não foi configurado: falta colar o Client ID do Google em config.js.');
-      return;
-    }
-    google.accounts.id.initialize({
-      client_id: CONFIG.GOOGLE_CLIENT_ID,
-      callback: handleCredentialResponse,
-      error_callback: (err) => showLoginError(mapAuthError(err?.type))
-    });
-    google.accounts.id.renderButton($('gsiButtonWrap'), { theme:'filled_black', size:'large', shape:'pill', text:'signin_with' });
+const OAUTH_ENDPOINT = 'https://accounts.google.com/o/oauth2/v2/auth';
+const USERINFO_ENDPOINT = 'https://www.googleapis.com/oauth2/v3/userinfo';
+const SESSION_KEY = 'cofre_gauth_session';
+const STATE_KEY = 'cofre_oauth_state';
 
-    tokenClient = google.accounts.oauth2.initTokenClient({
-      client_id: CONFIG.GOOGLE_CLIENT_ID,
-      scope: CONFIG.DRIVE_SCOPE,
-      callback: async (resp) => {
-        if(resp.error){
-          showLoginError(mapAuthError(resp.error));
-          return;
-        }
-        accessToken = resp.access_token;
-        try{
-          await afterAuth();
-        }catch(e){
-          showLoginError('Login feito, mas não foi possível acessar o Google Drive. Verifique sua internet e tente novamente.');
-          showRetry(() => tokenClient.requestAccessToken({ prompt:'' }));
-        }
-      },
-      error_callback: (err) => showLoginError(mapAuthError(err?.type))
-    });
-  }catch(e){
-    showLoginError('Não foi possível iniciar o login do Google. Recarregue a página e tente novamente.');
+function currentRedirectUri(){
+  return window.location.origin + window.location.pathname;
+}
+
+function startGoogleLogin(){
+  if(!CONFIG.GOOGLE_CLIENT_ID || CONFIG.GOOGLE_CLIENT_ID.includes('COLE_SEU_CLIENT_ID')){
+    showLoginError('O app ainda não foi configurado: falta colar o Client ID do Google em config.js.');
+    return;
   }
-};
+  const state = crypto.randomUUID();
+  sessionStorage.setItem(STATE_KEY, state);
+  const params = new URLSearchParams({
+    client_id: CONFIG.GOOGLE_CLIENT_ID,
+    redirect_uri: currentRedirectUri(),
+    response_type: 'token',
+    scope: CONFIG.SCOPES,
+    include_granted_scopes: 'true',
+    state,
+    prompt: 'select_account'
+  });
+  // navegação de página inteira — não é popup, não é bloqueável
+  window.location.href = `${OAUTH_ENDPOINT}?${params.toString()}`;
+}
+
+function parseAuthRedirect(){
+  if(!window.location.hash) return null;
+  const hash = new URLSearchParams(window.location.hash.slice(1));
+  const result = {
+    access_token: hash.get('access_token'),
+    expires_in: hash.get('expires_in'),
+    error: hash.get('error'),
+    state: hash.get('state')
+  };
+  // limpa o hash da URL para não deixar o token visível/reutilizável
+  history.replaceState(null, '', window.location.pathname + window.location.search);
+  return (result.access_token || result.error) ? result : null;
+}
+
+async function restoreSession(){
+  try{
+    const raw = sessionStorage.getItem(SESSION_KEY);
+    if(!raw) return false;
+    const session = JSON.parse(raw);
+    if(!session.access_token || Date.now() >= session.expires_at) return false;
+    accessToken = session.access_token;
+    googleUser = session.user;
+    await afterAuth();
+    return true;
+  }catch(e){
+    return false;
+  }
+}
+
+async function handleRedirectReturn(){
+  const result = parseAuthRedirect();
+  if(!result) return false;
+
+  if(result.error){
+    showLoginError(mapAuthError(result.error));
+    return true;
+  }
+  const expectedState = sessionStorage.getItem(STATE_KEY);
+  if(!result.state || result.state !== expectedState){
+    showLoginError('Não foi possível validar o retorno do Google. Tente entrar novamente.');
+    return true;
+  }
+  sessionStorage.removeItem(STATE_KEY);
+  accessToken = result.access_token;
+
+  try{
+    const r = await fetch(USERINFO_ENDPOINT, { headers:{ Authorization:`Bearer ${accessToken}` } });
+    if(!r.ok) throw new Error('userinfo failed');
+    const info = await r.json();
+    googleUser = { name: info.name, email: info.email, picture: info.picture };
+    const expiresAt = Date.now() + (Number(result.expires_in || 3600) * 1000);
+    sessionStorage.setItem(SESSION_KEY, JSON.stringify({ access_token: accessToken, user: googleUser, expires_at: expiresAt }));
+    await afterAuth();
+  }catch(e){
+    showLoginError('Login feito, mas não foi possível confirmar sua conta Google. Tente novamente.');
+    showRetry(startGoogleLogin);
+  }
+  return true;
+}
 
 function mapAuthError(type){
   switch(type){
-    case 'popup_closed': case 'popup_closed_by_user':
-      return 'Você fechou a janela antes de concluir o login.';
     case 'access_denied':
       return 'É necessário autorizar o acesso ao Google Drive para usar o cofre.';
-    case 'immediate_failed':
-      return 'Não foi possível entrar automaticamente. Clique no botão para tentar de novo.';
-    case 'popup_failed_to_open':
-      return 'O navegador bloqueou a janela de login. Permita pop-ups para este site e tente novamente.';
+    case 'invalid_request':
+    case 'invalid_client':
+      return 'O app não está configurado corretamente (Client ID ou URL de redirecionamento). Confira o config.js.';
+    case 'redirect_uri_mismatch':
+      return 'A URL deste site não está autorizada no Google Cloud. Adicione-a em "URIs de redirecionamento autorizados".';
     default:
       return 'Não foi possível conectar com sua conta Google. Tente novamente.';
   }
@@ -102,19 +154,14 @@ function showRetry(fn){
   btn.onclick = () => { btn.style.display = 'none'; $('lockErr').textContent=''; fn(); };
 }
 
-function handleCredentialResponse(response){
-  try{
-    // decode the JWT just to show name/photo — the real Drive access
-    // comes from the separate token client below.
-    const payload = JSON.parse(atob(response.credential.split('.')[1]));
-    googleUser = { name: payload.name, email: payload.email, picture: payload.picture };
-    $('lockErr').textContent = '';
-    // now request the Drive access token
-    tokenClient.requestAccessToken({ prompt: '' });
-  }catch(e){
-    showLoginError('Não foi possível concluir o login com o Google. Tente novamente.');
-  }
-}
+$('googleLoginBtn').onclick = startGoogleLogin;
+
+// ao carregar a página: primeiro trata volta do redirecionamento,
+// senão tenta retomar sessão já autorizada nesta aba
+(async () => {
+  const handled = await handleRedirectReturn();
+  if(!handled) await restoreSession();
+})();
 
 // ============================================================
 // GOOGLE DRIVE
@@ -131,6 +178,7 @@ async function driveFetch(url, options={}){
   }
   if(r.status === 401){
     accessToken = null;
+    sessionStorage.removeItem(SESSION_KEY);
     throw new Error('SESSION_EXPIRED');
   }
   if(!r.ok){
@@ -265,7 +313,7 @@ function enterApp(){
 }
 
 $('signOutBtn').onclick = () => {
-  google.accounts.id.disableAutoSelect();
+  sessionStorage.removeItem(SESSION_KEY);
   accessToken = null; googleUser = null; vaultKey = null; entries = []; driveFileId = null;
   $('app').classList.remove('active');
   $('lockWrap').style.display = 'flex';

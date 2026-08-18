@@ -18,7 +18,8 @@ Isso só funciona publicado num domínio de verdade (https), porque o login do G
    - Em "Usuários de teste" (enquanto o app não é publicado), adicione o(s) e-mail(s) do Google que vão usar o app
 4. Vá em **APIs e serviços → Credenciais → Criar credenciais → ID do cliente OAuth**:
    - Tipo de aplicativo: **Aplicativo da Web**
-   - Em **Origens JavaScript autorizadas**, adicione a URL onde você vai publicar (ex: `https://seu-app.vercel.app`). Pode adicionar mais de uma.
+   - Em **Origens JavaScript autorizadas**, adicione a URL onde você vai publicar (ex: `https://seu-app.vercel.app`)
+   - Em **URIs de redirecionamento autorizados**, adicione **a mesma URL, exatamente igual** (ex: `https://seu-app.vercel.app/`) — este é o passo essencial: é para essa URL que o Google devolve o usuário depois do login, e o login usa redirecionamento de página inteira (não popup), então nada fica sujeito a bloqueador de pop-up do navegador
    - Salve e copie o **Client ID** gerado (termina em `.apps.googleusercontent.com`)
 
 ## 2. Configurar o projeto
@@ -58,5 +59,5 @@ Depois de publicar, **volte no passo 1** e confirme que a URL final está em "Or
 ## Limitações a saber
 
 - O escopo usado (`drive.file`) só dá ao app acesso a **arquivos que ele mesmo criou** — não ao resto do Drive do usuário. É a opção mais segura para esse tipo de app.
-- A sessão de acesso ao Drive dura o tempo do token do Google (geralmente ~1h); ao expirar, basta clicar em Entrar novamente.
+- O login é feito por **redirecionamento de página inteira**, não por popup — assim nenhum bloqueador de pop-up do navegador interfere. A sessão fica salva no navegador (aba atual) e dura cerca de 1h; ao expirar, basta clicar em "Entrar com o Google" de novo.
 - Para publicar oficialmente (sem a tela de aviso "app não verificado"), depois é preciso passar pela verificação do Google — opcional, só necessário se for distribuir para muita gente.
