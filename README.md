@@ -1,8 +1,8 @@
-# Cofre — login com Google + Google Drive
+# Chave Mestra — sua única chave para tudo
 
 App de credenciais (nome, senha, link, imagem, descritivo, data de atualização) com:
 - Login oficial com a Conta Google
-- Dados salvos como um JSON no **Google Drive do próprio usuário** (arquivo `cofre-vault.json`, criado numa pasta comum do Drive, não numa área oculta)
+- Dados salvos como um JSON no **Google Drive do próprio usuário** (arquivo `chave-mestra-vault.json`, criado numa pasta comum do Drive, não numa área oculta)
 - Criptografia AES-256 no navegador com senha mestra — mesmo alguém com acesso ao Drive não lê as senhas sem essa senha mestra
 
 Isso só funciona publicado num domínio de verdade (https), porque o login do Google bloqueia rodar dentro de iframes/sandboxes. Siga o passo a passo abaixo — leva uns 10 minutos.

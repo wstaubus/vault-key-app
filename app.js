@@ -1,5 +1,6 @@
 // ============================================================
-// Cofre — login com Google + armazenamento no Google Drive
+// Chave Mestra — sua única chave para tudo
+// Login com Google + armazenamento no Google Drive
 // ============================================================
 const $ = id => document.getElementById(id);
 const enc = new TextEncoder(), dec = new TextDecoder();
@@ -8,6 +9,22 @@ function unb64(str){ return Uint8Array.from(atob(str), c=>c.charCodeAt(0)); }
 function toast(msg){ const t=$('toast'); t.textContent=msg; t.classList.add('show'); setTimeout(()=>t.classList.remove('show'),2200); }
 function fmtDate(iso){ return new Date(iso).toLocaleDateString('pt-BR',{day:'2-digit',month:'2-digit',year:'numeric'}); }
 function escapeHtml(s){ return (s||'').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+
+// ---------- categorias ----------
+const CATEGORIES = [
+  { id:'financas', label:'Finanças', desc:'Bancos, cartões de crédito, investimentos e carteiras digitais.' },
+  { id:'trabalho', label:'Trabalho', desc:'E-mails corporativos, ferramentas de gerenciamento e acessos da empresa.' },
+  { id:'social', label:'Social', desc:'Redes sociais, aplicativos de mensagem e fóruns.' },
+  { id:'essenciais', label:'Essenciais', desc:'E-mails pessoais, contas do governo e serviços de saúde.' },
+  { id:'entretenimento', label:'Entretenimento', desc:'Streaming de vídeo, música, jogos e assinaturas de mídia.' },
+  { id:'compras', label:'Compras', desc:'Lojas virtuais, aplicativos de entrega e sites de e-commerce.' },
+  { id:'outros', label:'Outros', desc:'O que não se encaixa nas categorias acima.' }
+];
+function catLabel(id){ return (CATEGORIES.find(c => c.id === id) || CATEGORIES[CATEGORIES.length-1]).label; }
+function populateCategorySelects(){
+  $('fCategoria').innerHTML = CATEGORIES.map(c => `<option value="${c.id}">${c.label}</option>`).join('');
+  $('categoryFilter').innerHTML = `<option value="">Todas as categorias</option>` + CATEGORIES.map(c => `<option value="${c.id}">${c.label}</option>`).join('');
+}
 
 // ---------- crypto ----------
 async function deriveKey(password, saltB64){
@@ -155,6 +172,8 @@ function showRetry(fn){
 }
 
 $('googleLoginBtn').onclick = startGoogleLogin;
+
+populateCategorySelects();
 
 // ao carregar a página: primeiro trata volta do redirecionamento,
 // senão tenta retomar sessão já autorizada nesta aba
@@ -356,7 +375,8 @@ async function persistVault(){
 // ============================================================
 function render(){
   const q = $('searchInput').value.trim().toLowerCase();
-  const list = entries.filter(e => e.nome.toLowerCase().includes(q));
+  const cat = $('categoryFilter').value;
+  const list = entries.filter(e => e.nome.toLowerCase().includes(q) && (!cat || e.categoria === cat));
   const grid = $('grid');
   grid.innerHTML = '';
   $('emptyState').style.display = list.length ? 'none' : 'block';
@@ -366,6 +386,7 @@ function render(){
     const card = document.createElement('div');
     card.className = 'card-item';
     const initial = (e.nome||'?').trim().charAt(0).toUpperCase();
+    const catId = e.categoria || 'outros';
     card.innerHTML = `
       <div class="card-top">
         ${e.imagem ? `<img class="card-img" src="${e.imagem}">` : `<div class="card-img placeholder">${initial}</div>`}
@@ -374,6 +395,7 @@ function render(){
           ${e.link ? `<a href="${escapeHtml(e.link)}" target="_blank" rel="noopener">${escapeHtml(e.link)}</a>` : ''}
         </div>
       </div>
+      <span class="cat-badge cat-${catId}">${catLabel(catId)}</span>
       ${e.descritivo ? `<p class="card-desc">${escapeHtml(e.descritivo)}</p>` : ''}
       <div class="pw-row">
         <span class="pw-text" data-pw="${escapeHtml(e.senha)}" data-visible="false">••••••••••</span>
@@ -408,11 +430,13 @@ function render(){
   }
 }
 $('searchInput').oninput = render;
+$('categoryFilter').onchange = render;
 
 function openModal(entry){
   editingId = entry ? entry.id : null;
   $('modalTitle').textContent = entry ? 'Editar credencial' : 'Nova credencial';
   $('fName').value = entry?.nome || '';
+  $('fCategoria').value = entry?.categoria || 'outros';
   $('fSenha').value = entry?.senha || '';
   $('fLink').value = entry?.link || '';
   $('fDesc').value = entry?.descritivo || '';
@@ -453,9 +477,9 @@ $('btnSave').onclick = async () => {
   const now = new Date().toISOString();
   if(editingId){
     const e = entries.find(x => x.id === editingId);
-    Object.assign(e, { nome, senha:$('fSenha').value, link:$('fLink').value.trim(), descritivo:$('fDesc').value.trim(), imagem:pendingImage, atualizadoEm:now });
+    Object.assign(e, { nome, categoria:$('fCategoria').value, senha:$('fSenha').value, link:$('fLink').value.trim(), descritivo:$('fDesc').value.trim(), imagem:pendingImage, atualizadoEm:now });
   } else {
-    entries.push({ id:crypto.randomUUID(), nome, senha:$('fSenha').value, link:$('fLink').value.trim(), descritivo:$('fDesc').value.trim(), imagem:pendingImage, criadoEm:now, atualizadoEm:now });
+    entries.push({ id:crypto.randomUUID(), nome, categoria:$('fCategoria').value, senha:$('fSenha').value, link:$('fLink').value.trim(), descritivo:$('fDesc').value.trim(), imagem:pendingImage, criadoEm:now, atualizadoEm:now });
   }
   await persistVault();
   $('overlay').classList.remove('active');

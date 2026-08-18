@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, viewport-fit=cover">
-<title>Cofre — login com Google</title>
+<title>Chave Mestra — sua única chave para tudo</title>
 <link rel="stylesheet" href="style.css">
 </head>
 <body>
@@ -15,7 +15,8 @@
       <path d="M13 18v-5a7 7 0 0 1 14 0v5" stroke="#0071e3" stroke-width="2"/>
       <circle cx="20" cy="26" r="2.3" fill="#0071e3"/>
     </svg>
-    <h1>Cofre</h1>
+    <h1>Chave Mestra</h1>
+    <p class="slogan">Sua única chave para tudo.</p>
     <p class="lock-sub">Suas credenciais, criptografadas, salvas no seu próprio Google Drive.</p>
 
     <div id="gsiStep">
@@ -47,7 +48,7 @@
 
 <div class="app" id="app">
   <header class="top">
-    <h1>Cofre <span class="badge">Google Drive</span></h1>
+    <h1>Chave Mestra <span class="badge">Google Drive</span></h1>
     <div class="top-actions">
       <span class="sync-status" id="syncStatus"></span>
       <span class="user-chip" id="userChip"></span>
@@ -57,6 +58,7 @@
 
   <div class="toolbar">
     <input type="text" id="searchInput" placeholder="Buscar por nome...">
+    <select id="categoryFilter"></select>
     <button class="btn small" id="btnNew" style="width:auto;">+ Nova credencial</button>
   </div>
 
@@ -78,6 +80,7 @@
       </div>
     </div>
     <div class="field"><label>Nome</label><input type="text" id="fName" placeholder="Ex: Gmail pessoal"></div>
+    <div class="field"><label>Categoria</label><select id="fCategoria"></select></div>
     <div class="field"><label>Senha</label><input type="text" id="fSenha" placeholder="Senha"></div>
     <div class="field"><label>Link</label><input type="url" id="fLink" placeholder="https://..."></div>
     <div class="field"><label>Descritivo</label><textarea id="fDesc" placeholder="Observações, e-mail associado, etc."></textarea></div>
