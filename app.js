@@ -396,6 +396,7 @@ function render(){
         </div>
       </div>
       <span class="cat-badge cat-${catId}">${catLabel(catId)}</span>
+      ${e.login ? `<p class="card-login">👤 ${escapeHtml(e.login)}</p>` : ''}
       ${e.descritivo ? `<p class="card-desc">${escapeHtml(e.descritivo)}</p>` : ''}
       <div class="pw-row">
         <span class="pw-text" data-pw="${escapeHtml(e.senha)}" data-visible="false">••••••••••</span>
@@ -437,6 +438,7 @@ function openModal(entry){
   $('modalTitle').textContent = entry ? 'Editar credencial' : 'Nova credencial';
   $('fName').value = entry?.nome || '';
   $('fCategoria').value = entry?.categoria || 'outros';
+  $('fLogin').value = entry?.login || '';
   $('fSenha').value = entry?.senha || '';
   $('fLink').value = entry?.link || '';
   $('fDesc').value = entry?.descritivo || '';
@@ -477,9 +479,9 @@ $('btnSave').onclick = async () => {
   const now = new Date().toISOString();
   if(editingId){
     const e = entries.find(x => x.id === editingId);
-    Object.assign(e, { nome, categoria:$('fCategoria').value, senha:$('fSenha').value, link:$('fLink').value.trim(), descritivo:$('fDesc').value.trim(), imagem:pendingImage, atualizadoEm:now });
+    Object.assign(e, { nome, categoria:$('fCategoria').value, login:$('fLogin').value.trim(), senha:$('fSenha').value, link:$('fLink').value.trim(), descritivo:$('fDesc').value.trim(), imagem:pendingImage, atualizadoEm:now });
   } else {
-    entries.push({ id:crypto.randomUUID(), nome, categoria:$('fCategoria').value, senha:$('fSenha').value, link:$('fLink').value.trim(), descritivo:$('fDesc').value.trim(), imagem:pendingImage, criadoEm:now, atualizadoEm:now });
+    entries.push({ id:crypto.randomUUID(), nome, categoria:$('fCategoria').value, login:$('fLogin').value.trim(), senha:$('fSenha').value, link:$('fLink').value.trim(), descritivo:$('fDesc').value.trim(), imagem:pendingImage, criadoEm:now, atualizadoEm:now });
   }
   await persistVault();
   $('overlay').classList.remove('active');
