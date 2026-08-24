@@ -380,7 +380,7 @@ function render(){
   const grid = $('grid');
   grid.innerHTML = '';
   $('emptyState').style.display = list.length ? 'none' : 'block';
-  list.sort((a,b) => new Date(b.atualizadoEm) - new Date(a.atualizadoEm));
+  list.sort((a,b) => a.nome.localeCompare(b.nome, 'pt-BR', {sensitivity:'base'}));
 
   for(const e of list){
     const card = document.createElement('div');
@@ -395,7 +395,6 @@ function render(){
           ${e.link ? `<a href="${escapeHtml(e.link)}" target="_blank" rel="noopener">${escapeHtml(e.link)}</a>` : ''}
         </div>
       </div>
-      <span class="cat-badge cat-${catId}">${catLabel(catId)}</span>
       ${e.login ? `<p class="card-login">👤 ${escapeHtml(e.login)}</p>` : ''}
       ${e.descritivo ? `<p class="card-desc">${escapeHtml(e.descritivo)}</p>` : ''}
       <div class="pw-row">
@@ -404,7 +403,7 @@ function render(){
         <button class="icon-btn btn-copy" title="Copiar senha">⧉</button>
       </div>
       <div class="card-foot">
-        <span class="stamp">Atualizado ${fmtDate(e.atualizadoEm)}</span>
+        <span class="cat-badge cat-${catId}">${catLabel(catId)}</span>
         <div class="card-menu">
           <button class="icon-btn btn-edit" title="Editar">✎</button>
           <button class="icon-btn btn-del" title="Excluir">🗑</button>
@@ -445,6 +444,12 @@ function openModal(entry){
   pendingImage = entry?.imagem || '';
   $('imgPreview').src = pendingImage || 'data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" width="56" height="56"%3E%3Crect width="56" height="56" fill="%23242220"/%3E%3C/svg%3E';
   $('imgInput').value = '';
+  if(entry?.atualizadoEm){
+    $('modalUpdated').textContent = `Última atualização: ${fmtDate(entry.atualizadoEm)}`;
+    $('modalUpdated').style.display = 'block';
+  } else {
+    $('modalUpdated').style.display = 'none';
+  }
   $('overlay').classList.add('active');
 }
 $('btnNew').onclick = () => openModal(null);

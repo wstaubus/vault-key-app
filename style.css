@@ -76,6 +76,7 @@ header.top{
   border:1px solid var(--line); box-shadow:var(--shadow); position:sticky; top:16px; z-index:10;
 }
 header.top h1{ font-size:24px; margin:0; display:flex; align-items:center; gap:10px;}
+.header-icon{ width:28px; height:28px; object-fit:contain; }
 .badge{ font-size:13px; background:rgba(0,113,227,0.1); color:var(--accent); padding:4px 11px; border-radius:980px; font-weight:600; letter-spacing:0;}
 .top-actions{ display:flex; gap:14px; flex-wrap:wrap; align-items:center; }
 .toolbar{ display:flex; gap:12px; margin-bottom:24px; flex-wrap:wrap; }
@@ -137,6 +138,7 @@ select:focus{ border-color:var(--accent); box-shadow:0 0 0 4px rgba(0,113,227,0.
 .modal h2{ font-size:23px; margin:0 0 22px; }
 .img-picker{ display:flex; align-items:center; gap:14px; margin-bottom:18px; }
 .img-preview{ width:58px; height:58px; border-radius:14px; object-fit:cover; background:var(--surface-2); border:1px solid var(--line); flex-shrink:0; }
+.modal-meta{ font-size:12.5px; color:var(--muted); margin:-8px 0 4px; }
 .modal-actions{ display:flex; gap:10px; margin-top:24px; }
 .toast{
   position:fixed; bottom:28px; left:50%; transform:translateX(-50%); background:rgba(29,29,31,0.92);
